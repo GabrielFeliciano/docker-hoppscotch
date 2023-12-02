@@ -1,0 +1,40 @@
+version: "3"
+
+volumes:
+  db:
+
+
+services:
+  hoppscotch:
+    image: hoppscotch/hoppscotch
+    container_name: hoppscotch
+    ports:
+      - 3000:3000
+      - 3100:3100
+      - 3170:3170
+    networks:
+      - hoppscotch-ntk
+    env_file:
+      - .env
+    command: sh -c "pnpx prisma migrate deploy && node /usr/src/app/aio_run.mjs"
+    depends_on:
+      hoppscotch-database:
+        condition: service_healthy
+
+  hoppscotch-database:
+    container_name: hoppscotch-database
+    image: postgres:16.1-bullseye
+    environment:
+      - POSTGRES_PASSWORD=password
+    networks:
+      - hoppscotch-ntk
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d 'user=${DB_USER:-postgres} dbname=hoppscotch host=localhost port=5432'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db:/var/lib/postgresql/data
+
+networks:
+  hoppscotch-ntk:
